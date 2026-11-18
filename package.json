@@ -1,0 +1,246 @@
+{
+  "name": "sxpt-agent",
+  "displayName": "SXPT AI Coding Agent",
+  "description": "实训平台内置 VS Code 的 AI 编程 Agent 执行端：界面在实训平台页面 VS Code 右侧的 Agent 面板，扩展负责运行 Agent、审批、撤销、会话与设置，通过 code-server 端口代理与面板通信。",
+  "version": "0.5.3",
+  "publisher": "sxpt",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Education",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "ai",
+    "coding",
+    "agent",
+    "training",
+    "education"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "ptnAgent.status",
+        "title": "面板连接状态",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ptnAgent.undo",
+        "title": "撤销上次 AI 修改",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ptnAgent.stop",
+        "title": "停止当前任务",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ptnAgent.task.explain",
+        "title": "解释选中代码",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ptnAgent.task.refactor",
+        "title": "重构选中代码",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ptnAgent.task.tests",
+        "title": "为选中代码生成单元测试",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ptnAgent.task.problems",
+        "title": "分析当前错误",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ptnAgent.task.fix",
+        "title": "修复当前问题",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ptnAgent.task.project",
+        "title": "理解项目结构",
+        "category": "AI Agent"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "ptnAgent.editorMenu",
+        "label": "AI Agent"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "ptnAgent.editorMenu",
+          "group": "ptnAgent@1"
+        }
+      ],
+      "ptnAgent.editorMenu": [
+        {
+          "command": "ptnAgent.task.explain",
+          "when": "editorHasSelection",
+          "group": "1_selection@1"
+        },
+        {
+          "command": "ptnAgent.task.refactor",
+          "when": "editorHasSelection",
+          "group": "1_selection@2"
+        },
+        {
+          "command": "ptnAgent.task.tests",
+          "when": "editorHasSelection",
+          "group": "1_selection@3"
+        },
+        {
+          "command": "ptnAgent.task.problems",
+          "group": "2_problems@1"
+        },
+        {
+          "command": "ptnAgent.task.fix",
+          "group": "2_problems@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "ptnAgent.task.explain",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "ptnAgent.task.refactor",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "ptnAgent.task.tests",
+          "when": "editorHasSelection"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "ptnAgent.task.explain",
+        "key": "ctrl+alt+e",
+        "mac": "cmd+alt+e",
+        "when": "editorHasSelection"
+      }
+    ],
+    "configuration": {
+      "title": "SXPT AI Coding Agent",
+      "properties": {
+        "ptnAgent.approvalMode": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "autoEdit",
+            "readOnly"
+          ],
+          "enumDescriptions": [
+            "每次修改文件、运行命令都需要确认（推荐）",
+            "工作区内的文件修改自动应用（可一键撤销），运行命令仍需确认",
+            "只读：Agent 只能查看代码和诊断，不能修改文件或运行命令"
+          ],
+          "default": "ask",
+          "description": "Agent 审批模式"
+        },
+        "ptnAgent.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "模型服务的 API 地址（OpenAI 兼容接口，需包含版本路径，例如 https://api.example.com/v1）。建议在平台 Agent 面板的设置里填写。"
+        },
+        "ptnAgent.model": {
+          "type": "string",
+          "default": "",
+          "description": "模型名称，需要支持工具调用（function calling）。建议在平台 Agent 面板的设置里从接口返回的列表中选择。"
+        },
+        "ptnAgent.contextWindow": {
+          "type": "number",
+          "default": 128000,
+          "description": "模型上下文窗口大小（token）。Agent 会据此自动压缩过长的对话，请按所用模型实际能力填写"
+        },
+        "ptnAgent.maxOutputTokens": {
+          "type": "number",
+          "default": 8192,
+          "description": "单次回复的最大输出 token 数"
+        },
+        "ptnAgent.runTimeoutMs": {
+          "type": "number",
+          "default": 600000,
+          "description": "Agent 单次任务的最长运行时间（毫秒），超时自动停止"
+        },
+        "ptnAgent.maxContextLines": {
+          "type": "number",
+          "default": 400,
+          "description": "单次发送的最大代码行数"
+        },
+        "ptnAgent.autoContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "自动附带当前文件与选区上下文"
+        },
+        "ptnAgent.platformUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "（管理员配置，学生无需填写）实训平台上下文接口地址，留空表示不连接平台"
+        },
+        "ptnAgent.systemPromptExtra": {
+          "type": "string",
+          "default": "",
+          "editPresentation": "multilineText",
+          "description": "自定义指令：追加到系统提示词，例如课程的代码规范"
+        },
+        "ptnAgent.includeProjectContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "在项目类问题中附带项目结构摘要"
+        },
+        "ptnAgent.allowedCommands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Agent 可免确认执行的命令前缀，例如 npm test、dotnet build。含管道、&&、; 等 shell 元字符的命令仍需确认；高危命令一律拦截"
+        },
+        "ptnAgent.commandTimeoutMs": {
+          "type": "number",
+          "default": 120000,
+          "description": "单条命令的最长执行时间（毫秒）"
+        },
+        "ptnAgent.bridgePort": {
+          "type": "number",
+          "default": 8845,
+          "scope": "machine",
+          "description": "（管理员配置）平台 Agent 面板连接的本机端口。面板通过 code-server 的 /proxy/<端口>/ 访问，修改后需重新加载窗口，并同步修改平台前端的端口配置"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "tsc --noEmit -p ./",
+    "package": "vsce package",
+    "check": "node scripts/check-policy.js && node scripts/check-commands.js && node scripts/check-platform.js && node scripts/check-undo.js && node scripts/check-models.js && node scripts/check-pi-custom-provider.js && node scripts/check-providers.js && node scripts/check-agent.js && node scripts/check-bridge.js && node scripts/smoke.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^1.5.2",
+    "ws": "^8.22.2"
+  }
+}
